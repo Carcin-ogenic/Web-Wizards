@@ -39,12 +39,12 @@ const FarmDataLanding: React.FC = () => {
               Make informed decisions to maximize your harvest and profits.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium" onClick={()=>router.push('/home')}>
+              <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-medium" onClick={()=>router.push('/')}>
                 Get Started
               </button>
-              {/* <button className="border border-green-600 text-green-600 px-6 py-3 rounded-lg hover:bg-green-50 font-medium">
+              <button className="border border-green-600 text-green-600 px-6 py-3 rounded-lg hover:bg-green-50 font-medium">
                 Watch 
-              </button> */}
+              </button>
             </div>
           </div>
           <div className="relative">
