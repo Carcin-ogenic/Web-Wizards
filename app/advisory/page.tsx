@@ -1,31 +1,56 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
-import { ArrowLeft, Cloud, CloudRain, Sun, Thermometer, AlertTriangle, Sprout } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { ArrowLeft, Cloud, CloudRain, Sun, Thermometer, AlertTriangle, Sprout } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import LanguageSelector from "@/components/language-selector"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LanguageSelector from "@/components/language-selector";
 
 export default function AdvisoryPage() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const crop = searchParams.get("crop") || ""
-  const state = searchParams.get("state") || ""
-  const season = searchParams.get("season") || ""
-  const [language, setLanguage] = useState(searchParams.get("language") || "english")
+  // Get values from the URL query parameters
+  const crop = searchParams.get("crop") || "";
+  const state = searchParams.get("state") || "";
+  const season = searchParams.get("season") || "";
+  const [language, setLanguage] = useState(searchParams.get("language") || "english");
 
   // Placeholder for API data
-  const [weatherData, setWeatherData] = useState<any>(null)
-  const [mandiData, setMandiData] = useState<any>(null)
-  const [advisoryData, setAdvisoryData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [weatherData, setWeatherData] = useState<any>(null);
+  const [mandiData, setMandiData] = useState<any>(null);
+  const [advisoryData, setAdvisoryData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Call live mandi price API whenever crop and state change
+  useEffect(() => {
+    if (crop && state) {
+      // console.log("Fetching live mandi price for:", { state, crop });
+      fetchMandiPrice(state, crop).then((liveRecord) => {
+        // console.log("Live Record", liveRecord);
+        if (liveRecord) {
+          setMandiData({
+            prices: [
+              { mandi: "Modal Price", price: Number(liveRecord.modal_price), trend: "up" },
+              { mandi: "Minimum Price", price: Number(liveRecord.min_price), trend: "up" },
+              { mandi: "Maximum Price", price: Number(liveRecord.max_price), trend: "down" },
+            ],
+            avgPrice: Number(liveRecord.modal_price),
+            district: String(liveRecord.district),
+            lastUpdated: liveRecord.arrival_date,
+          });
+        } else {
+          console.error("No live record returned. Check if the commodity and state match API expectations.");
+        }
+      });
+    }
+  }, [crop, state]);
 
   useEffect(() => {
-    // Simulate API calls
+    // Simulate other API calls with a timeout
     setTimeout(() => {
       // Mock weather data
       setWeatherData({
@@ -37,19 +62,22 @@ export default function AdvisoryPage() {
           { day: "Day 5", temp: 33, condition: "sunny", humidity: 60 },
         ],
         alerts: [{ type: "warning", message: "High temperature expected in the next 3 days" }],
-      })
+      });
 
-      // Mock mandi prices
-      setMandiData({
-        prices: [
-          { mandi: "Local Mandi", price: 2450, trend: "up" },
-          { mandi: "District Mandi", price: 2500, trend: "up" },
-          { mandi: "State Mandi", price: 2400, trend: "down" },
-          { mandi: "Nearby District", price: 2350, trend: "stable" },
-        ],
-        avgPrice: 2425,
-        lastUpdated: "Today, 10:00 AM",
-      })
+      // Fallback mandi data in case live API fails
+      setMandiData(
+        (prev: any) =>
+          prev || {
+            prices: [
+              { mandi: "Modal Price", price: 2450, trend: "up" },
+              { mandi: "Minimum Price", price: 2500, trend: "up" },
+              { mandi: "Maximum Price", price: 2400, trend: "down" },
+            ],
+            avgPrice: 2425,
+            district: state,
+            lastUpdated: "Today, 10:00 AM",
+          }
+      );
 
       // Mock advisory data
       setAdvisoryData({
@@ -58,11 +86,11 @@ export default function AdvisoryPage() {
         pestControl: "Monitor for aphids and whiteflies which are common during this season for your crop.",
         fertilizer: "Apply nitrogen-rich fertilizer within the next week to support growth during this phase.",
         harvesting: "Your crop should be ready for harvest in approximately 45-60 days if planted now.",
-      })
+      });
 
-      setLoading(false)
-    }, 1500)
-  }, [crop, state, season])
+      setLoading(false);
+    }, 1500);
+  }, [crop, state, season]);
 
   const translations = {
     english: {
@@ -79,7 +107,9 @@ export default function AdvisoryPage() {
       mandiTitle: "Current Market Prices",
       mandiSubtitle: `for ${crop.charAt(0).toUpperCase() + crop.slice(1)}`,
       advisoryTitle: "Crop Advisory",
-      advisorySubtitle: `for ${crop.charAt(0).toUpperCase() + crop.slice(1)} in ${season.charAt(0).toUpperCase() + season.slice(1)} season`,
+      advisorySubtitle: `for ${crop.charAt(0).toUpperCase() + crop.slice(1)} in ${
+        season.charAt(0).toUpperCase() + season.slice(1)
+      } season`,
       day: "Day",
       temperature: "Temp",
       humidity: "Humidity",
@@ -88,6 +118,7 @@ export default function AdvisoryPage() {
       price: "Price (₹/q)",
       trend: "Trend",
       avgPrice: "Average Price",
+      district: "District",
       lastUpdated: "Last Updated",
       generalAdvice: "General Advice",
       irrigation: "Irrigation",
@@ -109,7 +140,9 @@ export default function AdvisoryPage() {
       mandiTitle: "वर्तमान बाजार मूल्य",
       mandiSubtitle: `${crop.charAt(0).toUpperCase() + crop.slice(1)} के लिए`,
       advisoryTitle: "फसल सलाह",
-      advisorySubtitle: `${season.charAt(0).toUpperCase() + season.slice(1)} मौसम में ${crop.charAt(0).toUpperCase() + crop.slice(1)} के लिए`,
+      advisorySubtitle: `${season.charAt(0).toUpperCase() + season.slice(1)} मौसम में ${
+        crop.charAt(0).toUpperCase() + crop.slice(1)
+      } के लिए`,
       day: "दिन",
       temperature: "तापमान",
       humidity: "नमी",
@@ -118,6 +151,7 @@ export default function AdvisoryPage() {
       price: "मूल्य (₹/क्विंटल)",
       trend: "प्रवृत्ति",
       avgPrice: "औसत मूल्य",
+      district: "ज़िला",
       lastUpdated: "अंतिम अपडेट",
       generalAdvice: "सामान्य सलाह",
       irrigation: "सिंचाई",
@@ -125,37 +159,37 @@ export default function AdvisoryPage() {
       fertilizer: "उर्वरक",
       harvesting: "कटाई",
     },
-  }
+  };
 
-  const t = translations[language as keyof typeof translations]
+  const t = translations[language as keyof typeof translations];
 
   const getWeatherIcon = (condition: string) => {
     switch (condition) {
       case "sunny":
-        return <Sun className="h-8 w-8 text-yellow-500" />
+        return <Sun className="h-8 w-8 text-yellow-500" />;
       case "partly_cloudy":
-        return <Cloud className="h-8 w-8 text-gray-400" />
+        return <Cloud className="h-8 w-8 text-gray-400" />;
       case "cloudy":
-        return <Cloud className="h-8 w-8 text-gray-600" />
+        return <Cloud className="h-8 w-8 text-gray-600" />;
       case "rainy":
-        return <CloudRain className="h-8 w-8 text-blue-500" />
+        return <CloudRain className="h-8 w-8 text-blue-500" />;
       default:
-        return <Thermometer className="h-8 w-8 text-red-500" />
+        return <Thermometer className="h-8 w-8 text-red-500" />;
     }
-  }
+  };
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
       case "up":
-        return <span className="text-green-600">↑</span>
+        return <span className="text-green-600">↑</span>;
       case "down":
-        return <span className="text-red-600">↓</span>
+        return <span className="text-red-600">↓</span>;
       case "stable":
-        return <span className="text-gray-600">→</span>
+        return <span className="text-gray-600">→</span>;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-blue-50 flex items-center justify-center p-4">
@@ -286,6 +320,10 @@ export default function AdvisoryPage() {
                           <span className="font-medium">{t.avgPrice}:</span>
                           <span className="font-bold">₹{mandiData.avgPrice}</span>
                         </div>
+                        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">
+                          <span className="font-medium">{t.district}:</span>
+                          <span className="font-bold">{mandiData.district}</span>
+                        </div>
                         <div className="mt-2 text-sm text-gray-500 text-right">
                           {t.lastUpdated}: {mandiData.lastUpdated}
                         </div>
@@ -342,5 +380,29 @@ export default function AdvisoryPage() {
         </div>
       </div>
     </main>
-  )
+  );
+}
+
+// Live mandi price fetch function returns the first record.
+async function fetchMandiPrice(location: string, crop: string) {
+  const apiKey = "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b";
+  const baseUrl = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
+
+  const encodedLocation = encodeURIComponent(location);
+  const encodedCrop = encodeURIComponent(crop);
+
+  const url = `${baseUrl}?api-key=${apiKey}&format=json&filters%5Bstate.keyword%5D=${encodedLocation}&filters%5Bcommodity%5D=${encodedCrop}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    const data = await response.json();
+    console.log("Fetched Data:", data.records[0], "per Quintal");
+    return data.records[0];
+  } catch (error: any) {
+    console.error("Error fetching mandi price:", error.message);
+    return null;
+  }
 }
